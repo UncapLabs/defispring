@@ -1,7 +1,7 @@
 use actix_web::{middleware, App, HttpServer};
 use defispring::api::{
     data_storage::update_api_data,
-    endpoints::{get_allocation_amount, get_calldata, get_root, ApiDoc},
+    endpoints::{get_allocation_amount, get_calldata, get_root, get_round_breakdown, ApiDoc},
 };
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -20,6 +20,7 @@ async fn main() -> std::io::Result<()> {
             .service(get_calldata)
             .service(get_allocation_amount)
             .service(get_root)
+            .service(get_round_breakdown)
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )

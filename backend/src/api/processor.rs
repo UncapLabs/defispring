@@ -8,7 +8,8 @@ use super::{
     merkle_tree::felt_to_b16,
     structs::{
         CairoCalldata, CumulativeAllocation, FileNameInfo, JSONAllocation, MerkleTree,
-        RootQueryResult, RoundAmountMaps, RoundAmounts, RoundTreeData,
+        RootQueryResult, RoundAmountMaps, RoundAmounts, RoundBreakdownEntry,
+        RoundBreakdownResponse, RoundTreeData,
     },
 };
 use zip::ZipArchive;
@@ -62,6 +63,38 @@ pub fn get_raw_root(round: Option<u8>) -> Result<RootQueryResult, String> {
         round_total_amount: relevant_data.round_total_amount.to_string(),
     };
     Ok(res)
+}
+
+pub fn get_round_breakdown(address: &str) -> Result<RoundBreakdownResponse, String> {
+    let round_data = get_all_data();
+    if round_data.is_empty() {
+        return Ok(RoundBreakdownResponse { rounds: Vec::new() });
+    }
+
+    let felt_address = FieldElement::from_str(address).map_err(|e| e.to_string())?;
+
+    let mut sorted_rounds: Vec<&RoundTreeData> = round_data.iter().collect();
+    sorted_rounds.sort_by_key(|round| round.round);
+
+    let mut prev_cumulative = 0_u128;
+    let mut entries: Vec<RoundBreakdownEntry> = Vec::new();
+
+    for round in sorted_rounds {
+        let cumulative = round.address_amount(felt_address)?;
+        let round_amount = cumulative.saturating_sub(prev_cumulative);
+
+        if round_amount > 0 || cumulative > 0 {
+            entries.push(RoundBreakdownEntry {
+                round: round.round,
+                amount: round_amount.to_string(),
+                cumulative: cumulative.to_string(),
+            });
+        }
+
+        prev_cumulative = cumulative;
+    }
+
+    Ok(RoundBreakdownResponse { rounds: entries })
 }
 
 // Gets data for a specific round

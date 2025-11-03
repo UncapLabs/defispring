@@ -1,7 +1,10 @@
 use actix_web::{web, HttpResponse, Responder};
 
 use super::{
-    processor::{get_raw_allocation_amount, get_raw_calldata, get_raw_root}, structs::{CairoCalldata, RootQueryResult},
+    processor::{
+        get_raw_allocation_amount, get_raw_calldata, get_raw_root, get_round_breakdown as get_round_breakdown_data,
+    },
+    structs::{CairoCalldata, RootQueryResult, RoundBreakdownEntry, RoundBreakdownResponse},
 };
 use actix_web::get;
 use serde::Deserialize;
@@ -12,10 +15,11 @@ use utoipa::{IntoParams, OpenApi};
     paths(
         get_root,
         get_allocation_amount,
-        get_calldata
+        get_calldata,
+        get_round_breakdown
     ),
     components(
-        schemas(CairoCalldata, RootQueryResult)
+        schemas(CairoCalldata, RootQueryResult, RoundBreakdownResponse, RoundBreakdownEntry)
     ),
     tags(
         (name = "DeFi Incentives REST API", description = "DeFi incentives allocation endpoints")
@@ -79,6 +83,29 @@ pub async fn get_allocation_amount(query: web::Query<GetAllocationAmountParams>)
     match get_raw_allocation_amount(round, &query.address) {
         Ok(value) => HttpResponse::Ok().json(value.to_string()),
         Err(value) => HttpResponse::BadRequest().json(value)
+    }
+}
+
+#[derive(Deserialize, Debug, IntoParams)]
+pub struct GetRoundBreakdownParams {
+    /// Which address to query for.
+    address: String,
+}
+
+#[utoipa::path(
+    tag = "Gets the per-round allocation amounts for a given address",
+    responses(
+        (status = 200, description= "Per-round allocation response", body = RoundBreakdownResponse),
+    ),
+    params(
+        GetRoundBreakdownParams
+    ),
+)]
+#[get("/get_round_breakdown")]
+pub async fn get_round_breakdown(query: web::Query<GetRoundBreakdownParams>) -> impl Responder {
+    match get_round_breakdown_data(&query.address) {
+        Ok(value) => HttpResponse::Ok().json(value),
+        Err(value) => HttpResponse::BadRequest().json(value),
     }
 }
 

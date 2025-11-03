@@ -56,6 +56,24 @@ pub struct RootQueryResult {
     pub round_total_amount: String,
 }
 
+/// Breakdown of allocations for a single round
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RoundBreakdownEntry {
+    /// Which round
+    pub round: u8,
+    /// Allocation amount for this round only
+    pub amount: String,
+    /// Cumulative allocation amount up to and including this round
+    pub cumulative: String,
+}
+
+/// Response wrapper for per-round allocation breakdown
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RoundBreakdownResponse {
+    /// Per-round breakdown entries in ascending round order
+    pub rounds: Vec<RoundBreakdownEntry>,
+}
+
 /// A node in a Merkle tree
 #[derive(Debug, Clone)]
 pub struct Node {
