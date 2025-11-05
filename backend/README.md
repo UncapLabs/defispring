@@ -95,6 +95,30 @@ The addresses in the JSON files should be Starknet wallet addresses for the reci
 
 Addition of new data has to be connected with reinitializing the backend docker container.
 
+## Publishing a new round on Starknet
+
+Once a new round is live in the backend (either locally or on App Platform), follow these steps to publish it on-chain:
+
+1. **Retrieve the root**
+
+   ```
+   curl "https://<app-domain>/get_root?round=<round>"
+   ```
+
+   Note the `root` value (hex felt) and the `round_total_amount`.
+
+2. **Fund the distributor contract**  
+   Ensure the Starknet distributor contract holds at least the incremental STRK required for this round.
+
+3. **Call `add_root`**  
+   Using your preferred Starknet wallet or Voyager:
+
+   - Open the contract page on Voyager (Sepolia).
+   - Use the “Write Contract” tab, select `add_root`, and paste the `root` value from step 1.
+   - Submit the transaction from the owner account.
+
+Users can claim once the above steps are complete and the backend’s `/get_calldata` endpoint returns proofs for the new round.
+
 ## Program logic
 
 ### Startup
