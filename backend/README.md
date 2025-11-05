@@ -4,7 +4,7 @@ The backend is written in Rust. Running the project launches a REST API that can
 
 ## Deployment
 
-The backend can be run in a Docker container. It can be be deployed to any cloud architecture that supports containers, it is expected that it will be run behind a reverse proxy that provides e.g. HTTPS.
+The backend can be run in a Docker container. It can be deployed to any cloud architecture that supports containers; in production it is expected to sit behind a reverse proxy (for HTTPS, auth, etc.).
 
 ```
 $ cd backend
@@ -12,29 +12,37 @@ $ docker build -t allocation-backend .
 $ docker run -v DIR_WITH_INPUT_ZIP:/app/raw_input -p 8080:8080 allocation-backend
 ```
 
-Make sure that DIR_WITH_INPUT_ZIP is a folder on your machine that contains .zip files with the allocation specifications. These .zip files are processed on the container start.
+Make sure that DIR_WITH_INPUT_ZIP is a folder on your machine that contains .zip files with the allocation specifications. These .zip files are processed on the container start when running locally with Docker.
 
-TODO: push Docker image to a registry.
+### Running locally
 
-You can naturally also run it like any other compiled program; use `cargo build --release ` to build it and then use the binary in target/.
+1. Install Rust (via [rustup](https://rustup.rs/)) and ensure `rustc --version` is ≥ 1.81.
+2. Populate `backend/raw_input` with at least one `raw_<round>.zip` (see “Adding new data” below).
+3. From `backend/` run:
+   ```
+   cargo run
+   ```
+   When the logs show `API ready`, browse to `http://127.0.0.1:8080/swagger-ui/` or use `curl http://127.0.0.1:8080/get_root` to verify the API is serving data.
+
+### Deploying to DigitalOcean App Platform (first time)
+
+1. Push this repository to GitHub/GitLab with the desired `backend/raw_input` contents committed (both `.json` and `.zip` files).
+2. In App Platform, create a **Web Service** and connect the repo.
+3. Set **Source directory** to `backend`, **Build strategy** to `Dockerfile`, and leave the **Run command** empty so the Dockerfile’s `CMD ./api_run` is used.
+4. Configure the service’s **Public HTTP port** to `8080`; the platform will expose HTTPS automatically.
+5. Deploy. App Platform builds the Docker image (which copies `raw_input` during the build) and starts the API. Check the logs for `API ready`, then hit `https://<app-domain>/swagger-ui/` to confirm the deployment.
+
+For subsequent rounds, follow the workflow in “Adding new data for allocations”; each push triggers an automatic rebuild and redeploy.
 
 ## Startup time
 
 As the whole tree is built on startup and saved in memory, startup can take tens of minutes, up to hours on very slow hardware and/or big trees.
-
-## Running the project locally for testing purposes
-
-You can launch the API locally by first installing Rust and then running `cargo run`. The API will be available at http://127.0.0.1:8080/ENDPOINT .
-
-You can check if it's running at http://127.0.0.1:8080/swagger-ui/
 
 ## Endpoints
 
 The endpoints are documented with OpenAPI documentation. A Swagger UI is generated on top of the documentation at address /swagger-ui/ (remember the last /) when running the APIs somewhere.
 
 The Swagger UI can be used also to test the endpoints.
-
-An example deployment, with Swagger UI, can be found at http://35.195.237.203:8080/swagger-ui/ .
 
 ## Concepts
 
@@ -49,7 +57,18 @@ Once you launch the backend the program first extracts all of the allocation inf
 
 If you add new allocation files you need to restart the backend so it starts processing the files.
 
-The input files should be located in the _./raw_input_ folder.
+The input files should be located in the _./raw_input_ folder. Use the following workflow whenever you receive a new allocation export:
+
+- Transform OBL export: place the latest JSON in `backend/raw_input/raw_<round>.json`. Amounts must already be full 18‑decimal base units (wei style), addresses as Starknet hex strings.
+- Zip for the backend: from `backend/raw_input` run `zip raw_<round>.zip raw_<round>.json`. The backend only reads the `.zip`; keeping the `.json` aids reviews.
+- Validate locally (optional but recommended): `cargo run` in `backend/` should finish with “API ready.” Then check `curl http://127.0.0.1:8080/get_root?round=<round>` and `curl http://127.0.0.1:8080/get_round_breakdown?address=<address>` to confirm data looks right.
+- Commit & push:
+  ```
+  git add backend/raw_input/raw_<round>.json backend/raw_input/raw_<round>.zip
+  git commit -m "Add round <round> allocation"
+  git push
+  ```
+  Each GitHub push triggers the DigitalOcean App Platform auto-deploy, rebuilding the container with the updated `raw_input`.
 
 The files have the following characteristics:
 
