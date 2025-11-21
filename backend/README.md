@@ -77,6 +77,24 @@ The files have the following characteristics:
 - Each ZIP file should contain only one file with the same name, but with file extension _.JSON_
 - Each JSON file should have the following format:
 
+### Creating the ZIP file
+
+Navigate to the raw_input directory and create the ZIP file:
+
+```
+cd backend/raw_input
+zip raw_1.zip raw_1.json
+```
+
+Expected output:
+```
+  adding: raw_1.json (deflated 65%)
+```
+
+The deflation percentage will vary depending on the JSON content size and structure.
+
+### JSON format
+
 ```
 [
   {
